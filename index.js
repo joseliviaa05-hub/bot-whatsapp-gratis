@@ -20,7 +20,8 @@ async function conectarWhatsApp() {
     
     const sock = makeWASocket({
         auth: state,
-        logger: P({ level: 'silent' })
+        logger: P({ level: 'silent' }),
+        printQRInTerminal: false  // Desactivar para manejar manualmente
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -28,22 +29,39 @@ async function conectarWhatsApp() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        // Mostrar código QR cuando esté disponible
+        // IMPORTANTE: Mostrar código QR cuando esté disponible
         if (qr) {
-            console.log('\n📱 ¡ESCANEA ESTE CÓDIGO QR CON WHATSAPP BUSINESS!\n');
+            console.log('\n==============================================');
+            console.log('📱 ¡ESCANEA ESTE CÓDIGO QR CON WHATSAPP BUSINESS!');
+            console.log('==============================================\n');
             qrcode.generate(qr, { small: true });
-            console.log('\n👆 Abre WhatsApp Business → Dispositivos vinculados → Vincular dispositivo\n');
+            console.log('\n==============================================');
+            console.log('👆 Abre WhatsApp Business en tu celular');
+            console.log('👉 Ve a: Menú (⋮) → Dispositivos vinculados');
+            console.log('👉 Toca: Vincular un dispositivo');
+            console.log('👉 Escanea el código QR de arriba');
+            console.log('==============================================\n');
         }
         
         if(connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Conexión cerrada. Reconectando:', shouldReconnect);
+            const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
+            console.log('❌ Conexión cerrada.');
+            console.log('Código de error:', lastDisconnect?.error?.output?.statusCode);
+            console.log('Reconectando:', shouldReconnect);
+            
             if(shouldReconnect) {
-                setTimeout(() => conectarWhatsApp(), 3000);
+                console.log('⏳ Reintentando conexión en 5 segundos...\n');
+                setTimeout(() => conectarWhatsApp(), 5000);
+            } else {
+                console.log('🚫 Sesión cerrada. Necesitas escanear el QR nuevamente.');
             }
         } else if(connection === 'open') {
-            console.log('✅ Bot conectado a WhatsApp!');
+            console.log('\n🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉');
+            console.log('✅ ¡BOT CONECTADO A WHATSAPP EXITOSAMENTE!');
             console.log('🤖 El bot está listo y esperando mensajes...');
+            console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n');
+        } else if(connection === 'connecting') {
+            console.log('🔄 Conectando a WhatsApp...');
         }
     });
 
@@ -55,12 +73,15 @@ async function conectarWhatsApp() {
         const texto = msg.message.conversation || 
                      msg.message.extendedTextMessage?.text || '';
 
-        console.log(`📩 Mensaje de ${from}: ${texto}`);
+        console.log(`📩 Mensaje recibido de ${from}: ${texto}`);
 
-        const respuesta = await procesarMensaje(texto.toLowerCase());
-        
-        await sock.sendMessage(from, { text: respuesta });
-        console.log(`✅ Respuesta enviada`);
+        try {
+            const respuesta = await procesarMensaje(texto.toLowerCase());
+            await sock.sendMessage(from, { text: respuesta });
+            console.log(`✅ Respuesta enviada correctamente`);
+        } catch (error) {
+            console.error('❌ Error al enviar mensaje:', error);
+        }
     });
 }
 
@@ -207,7 +228,9 @@ function buscarPreciosCategoria(categoria, mensaje) {
 }
 
 // Iniciar bot
-conectarWhatsApp();
+console.log('\n🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀');
+console.log('🤖 INICIANDO BOT DE WHATSAPP...');
+console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n');
+console.log('📱 Esperando código QR de WhatsApp...\n');
 
-console.log('🤖 Iniciando bot de WhatsApp...');
-console.log('📱 Esperando código QR...');
+conectarWhatsApp();
